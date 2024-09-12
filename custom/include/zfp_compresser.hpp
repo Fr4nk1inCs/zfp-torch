@@ -7,6 +7,16 @@
 #include <vector>
 #include <zfp.h>
 
+#ifdef DEBUG
+#define LOGGER                                                                 \
+  std::cerr << "[LOG(fushen)] " __FILE__ ":" << __LINE__ << " (" << __func__   \
+            << "): "
+#else
+#define LOGGER                                                                 \
+  if (false)                                                                   \
+  std::cerr
+#endif
+
 class Metadata {
 public:
   Metadata(const torch::Tensor &);

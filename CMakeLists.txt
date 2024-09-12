@@ -1,16 +1,32 @@
 cmake_minimum_required(VERSION 3.14)
 project(zfp_torch_demo)
 
-# Set C++ standard 17
 set(CMAKE_CXX_STANDARD 17)
 
-# Export compile commands for Clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Find Python libraries and headers
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -Wall -g2 -ggdb -DDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -Wall")
+set(CMAKE_CXX_FLAGS_ASAN "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fno-omit-frame-pointer")
+
+set(default_build_type "Debug")
+
+if(NOT(CMAKE_BUILD_TYPE_SHADOW STREQUAL CMAKE_BUILD_TYPE))
+    if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+        message(STATUS "Setting build type to '${default_build_type}'")
+        set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
+    else()
+        message(STATUS "Building in ${CMAKE_BUILD_TYPE} mode")
+    endif()
+
+    set(CMAKE_BUILD_TYPE_SHADOW ${CMAKE_BUILD_TYPE} CACHE STRING "used to detect changes in build type" FORCE)
+endif()
+
 find_package(Python3 COMPONENTS Development REQUIRED)
 
-# Find PyTorch using python script
+find_library(ZFP_LIBRARY zfp REQUIRED)
+message(STATUS "ZFP_LIBRARY: ${ZFP_LIBRARY}")
+
 execute_process(
     COMMAND ${CMAKE_COMMAND} -E env python3 -c "import torch; print(torch.utils.cmake_prefix_path)"
     OUTPUT_VARIABLE TORCH_CMAKE_PREFIX_PATH
@@ -19,41 +35,19 @@ execute_process(
 set(CMAKE_PREFIX_PATH ${TORCH_CMAKE_PREFIX_PATH} ${CMAKE_PREFIX_PATH})
 find_package(Torch REQUIRED)
 
-# Find ZFP library and include path
-find_path(ZFP_INCLUDE_DIR zfp.h PATHS /usr/local/include)
-find_library(ZFP_LIBRARY zfp PATHS /usr/local/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
-# Add the include directories for Python, Torch, and ZFP
-set(INCLUDE_DIRECTORIES
-    ${Python3_INCLUDE_DIRS}
-    ${TORCH_INCLUDE_DIRS}
-    ${ZFP_INCLUDE_DIR}
-)
+include_directories(${TORCH_INCLUDE_DIRS} ${Python3_INCLUDE_DIRS})
 
-# Add the link libraries for Python, Torch, and ZFP
-set(LINK_LIBRARIES
-    ${Python3_LIBRARIES}
-    ${TORCH_LIBRARIES}
-    ${ZFP_LIBRARY}
-)
+include_directories(${PROJECT_SOURCE_DIR}/custom/include)
 
-# Add your source files here
-set(SOURCES custom/zfp_compresser.cpp)
+link_libraries(${TORCH_LIBRARIES} ${Python3_LIBRARIES} ${ZFP_LIBRARY})
 
-# Build the PyTorch extension
-add_library(zfp_torch MODULE ${SOURCES})
-target_compile_definitions(zfp_torch
-    PRIVATE
-        $<$<CONFIG:Debug>:DEBUG>
-)
-target_include_directories(zfp_torch PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(zfp_torch PRIVATE ${LINK_LIBRARIES})
+add_subdirectory(custom)
 
-# Build the executable
-add_executable(zfp_torch_demo custom/main.cpp ${SOURCES})
-target_compile_definitions(zfp_torch_demo
-    PRIVATE
-        $<$<CONFIG:Debug>:DEBUG>
-)
-target_include_directories(zfp_torch_demo PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(zfp_torch_demo PRIVATE ${LINK_LIBRARIES})
+# add_library(zfp_torch SHARED custom/lib/zfp_compresser.cpp)
+# target_link_libraries(zfp_torch PRIVATE ${LINK_DIRECTORIES})
+# add_executable(zfp_torch_demo custom/src/main.cpp)
+# target_link_libraries(zfp_torch_demo PRIVATE zfp_torch)

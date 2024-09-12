@@ -1,0 +1,1 @@
+add_library(zfp_torch SHARED zfp_compresser.cpp)
