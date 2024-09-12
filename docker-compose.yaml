@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  demo:
+    image: fs/cuda-zfp:v1
+    working_dir: /workspace/zfp-torch
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
