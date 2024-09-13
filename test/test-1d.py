@@ -4,7 +4,7 @@ import os
 import numpy as np
 import zfpy
 
-DEBUG = False
+DEBUG = True
 RATE = 8
 
 def debug(*args):
@@ -12,13 +12,13 @@ def debug(*args):
     print(*args)
 
 if __name__ == "__main__":
-  if os.getenv("DEBUG", "0") == "1":
-    DEBUG = True
+  if os.getenv("NODEBUG", "0") == "1":
+    DEBUG = False
 
   np.set_printoptions(linewidth=np.nan)
   torch.set_printoptions(linewidth=200)
 
-  print("ZFP Compress Rate: ", RATE)
+  debug("ZFP Compress Rate: ", RATE)
 
   # Numpy + zfpy
   input = np.random.rand(10).astype(np.float32)
