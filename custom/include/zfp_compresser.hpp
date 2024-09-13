@@ -2,6 +2,7 @@
 #define __ZFP_COMPRESSER_H__
 
 #include "c10/core/Device.h"
+#include <optional>
 #include <torch/extension.h>
 
 #include <vector>
@@ -17,30 +18,46 @@
   std::cerr
 #endif
 
+#define ALIGN(size, alignment) (((size) + (alignment) - 1) & ~((alignment) - 1))
+
 class Metadata {
 public:
   Metadata(const torch::Tensor &);
-  std::tuple<zfp_field *, zfp_stream *> to_zfp(void *, double) const;
-  torch::Tensor to_empty_tensor() const;
+  Metadata() = default;
+
+  std::tuple<zfp_field *, zfp_stream *> to_zfp(const torch::Tensor &,
+                                               double) const;
+  torch::Tensor to_empty_tensor(const c10::Device &) const;
+
+  void write(void *, const c10::Device &) const;
+  static Metadata const read(void *, const c10::Device &);
+
+  size_t byte_size() const {
+    return ALIGN(sizeof(size_t) + sizes.size() * sizeof(long) +
+                     sizeof(zfp_type),
+                 sizeof(size_t));
+  }
+
+  friend std::ostream &operator<<(std::ostream &, const Metadata &);
 
 private:
   std::vector<long> sizes;
   zfp_type type;
-  c10::Device device = c10::Device(c10::DeviceType::CPU);
 };
 
 class ZFPCompresser {
 public:
-  ZFPCompresser(double rate) noexcept : rate(rate){};
+  ZFPCompresser(long rate) noexcept : rate(rate){};
 
   // std::tuple<void *, Metadata> compress(const torch::Tensor &);
-  std::tuple<torch::Tensor, Metadata> compress(const torch::Tensor &);
+  torch::Tensor compress(const torch::Tensor &, bool = true);
 
   // torch::Tensor decompress(void *, const Metadata &);
-  torch::Tensor decompress(const torch::Tensor &, const Metadata &);
+  torch::Tensor decompress(const torch::Tensor &,
+                           std::optional<const Metadata> = std::nullopt);
 
 private:
-  double rate;
+  long rate;
 };
 
 #endif
