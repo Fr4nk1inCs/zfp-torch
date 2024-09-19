@@ -22,4 +22,5 @@ setup(
         )
     ],
     cmdclass={"build_ext": BuildExtension},
+    package_data={"zfp_torch": ["py.typed", "__init__.pyi"]},
 )
