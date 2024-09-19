@@ -10,8 +10,13 @@ setup(
     include_dirs=["zfp_torch/include", "dependencies/zfp/include"],
     ext_modules=[
         CUDAExtension(
-            name="zfp_torch",
-            sources=["zfp_torch/lib/zfp_compresser.cpp"],
+            name="zfp_torch._C",
+            sources=[
+                "zfp_torch/lib/compress.cpp",
+                "zfp_torch/lib/metadata.cpp",
+                "zfp_torch/lib/utils/types.cpp",
+                "zfp_torch/lib/torch_extension.cpp",
+            ],
             include_dirs=["zfp_torch/include", "dependencies/zfp/include"],
             libraries=[],
             extra_compile_args=[
@@ -24,5 +29,7 @@ setup(
         )
     ],
     cmdclass={"build_ext": BuildExtension},
+    include_package_data=True,
+    packages=["zfp_torch"],
     package_data={"zfp_torch": ["py.typed", "__init__.pyi"]},
 )

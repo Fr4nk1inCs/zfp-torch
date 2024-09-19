@@ -6,22 +6,20 @@
 
 ```python
 import torch # Torch need to be loaded before zfp_torch
-from zfp_torch import ZFPCompresser, Metadata
+import zfp_torch
 
 def compress(input: torch.Tensor, compress_rate: int, write_meta: bool=True) -> torch.Tensor:
-    compresser = ZFPCompresser(compress_rate)
     # if write_meta, metadata would be write to the begining of output tensor
-    output = compresser.compress(input, write_meta)
+    output = zfp_torch.compress(input, rate=compress_rate, write_meta=write_meta)
     return output # output is a torch.tensor(dtype=int8)
 
-def decompress(input: torch.Tensor, compress_rate: int, meta: Metadata | None=None) -> torch.Tensor:
-    compresser = ZFPCompresser(compress_rate)
+def decompress(input: torch.Tensor, meta: Metadata | None=None) -> torch.Tensor:
     # meta is None indicates that input tensor contains metadata
-    output = compresser.compress(input, meta)
+    output = zfp_torch.compress(input, meta=meta)
     return output
 
-def get_metadata(input: torch.tensor) -> Metadata:
-    return Metadata(input)
+def get_metadata(input: torch.tensor, compress_rate: int) -> Metadata:
+    return Metadata.from_tensor(input, rate=compress_rate)
 ```
 
 ## Install

@@ -31,19 +31,19 @@ if __name__ == "__main__":
     debug("Input       :", input)
     debug("Decompressed:", decompressed)
 
-    compresser = zfp_torch.ZFPCompresser(RATE)
     # PyTorch + zfp w/ CUDA
     input = torch.tensor(input, dtype=torch.float32, device="cuda").contiguous()
-    data = compresser.compress(input)
-    decompressed = compresser.decompress(data)
+    data = zfp_torch.compress(input, rate=RATE)
+    decompressed = zfp_torch.decompress(data)
 
     debug("=========== PyTorch + zfp (CUDA) ===========")
     debug("Input       :", input)
     debug("Decompressed:", decompressed)
+
     # PyTorch + zfp w/o CUDA
     input = input.cpu().contiguous()
-    data = compresser.compress(input)
-    decompressed = compresser.decompress(data)
+    data = zfp_torch.compress(input, rate=RATE)
+    decompressed = zfp_torch.decompress(data)
 
     debug("=========== PyTorch + zfp (CPU) ===========")
     debug("Input       :", input)

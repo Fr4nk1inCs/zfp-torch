@@ -1,16 +1,16 @@
 #include "c10/core/TensorOptions.h"
-#include "zfp_compresser.hpp"
 #include <iostream>
 #include <torch/extension.h>
+
+#include "compress.hpp"
 
 int main() {
   auto tensor = torch::randn(
       {8}, torch::TensorOptions().device(torch::kCUDA).dtype(torch::kFloat32));
 
   std::cout << tensor << std::endl;
-  auto compresser = ZFPCompresser(8);
-  auto compressed = compresser.compress(tensor);
+  auto compressed = zfp_torch::compress(tensor, 8);
   std::cout << compressed << std::endl;
-  auto decompressed = compresser.decompress(compressed);
+  auto decompressed = zfp_torch::decompress(compressed, 8);
   std::cout << decompressed << std::endl;
 }

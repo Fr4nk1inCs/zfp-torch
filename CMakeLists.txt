@@ -42,6 +42,8 @@ ExternalProject_Add(zfp
 
     CMAKE_ARGS -DZFP_WITH_CUDA=ON -DBUILD_SHARED_LIBS=OFF
 
+    BUILD_ALWAYS 0
+
     INSTALL_DIR ${PROJECT_SOURCE_DIR}/dependencies/zfp
 
     INSTALL_COMMAND ${CMAKE_COMMAND} --install <BINARY_DIR> --prefix <INSTALL_DIR>
