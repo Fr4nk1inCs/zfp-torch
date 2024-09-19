@@ -6,7 +6,7 @@ setup(
     author="Fr4nk1in",
     author_email="fushen@mail.ustc.edu.cn",
     url="https://github.com/Fr4nk1inCs/zfp-torch",
-    version="0.0.1",
+    version="0.0.2",
     include_dirs=["./zfp_torch/include"],
     ext_modules=[
         CUDAExtension(
