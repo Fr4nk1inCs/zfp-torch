@@ -24,9 +24,6 @@ endif()
 
 find_package(Python3 COMPONENTS Development REQUIRED)
 
-find_library(ZFP_LIBRARY zfp REQUIRED)
-message(STATUS "ZFP_LIBRARY: ${ZFP_LIBRARY}")
-
 execute_process(
     COMMAND ${CMAKE_COMMAND} -E env python3 -c "import torch; print(torch.utils.cmake_prefix_path)"
     OUTPUT_VARIABLE TORCH_CMAKE_PREFIX_PATH
@@ -35,14 +32,31 @@ execute_process(
 set(CMAKE_PREFIX_PATH ${TORCH_CMAKE_PREFIX_PATH} ${CMAKE_PREFIX_PATH})
 find_package(Torch REQUIRED)
 
+# add zfp as an external project
+include(ExternalProject)
+ExternalProject_Add(zfp
+
+    GIT_REPOSITORY https://github.com/llnl/zfp.git
+    GIT_TAG 1.0.1
+    GIT_PROGRESS 1
+
+    CMAKE_ARGS -DZFP_WITH_CUDA=ON -DBUILD_SHARED_LIBS=OFF
+
+    INSTALL_DIR ${PROJECT_SOURCE_DIR}/dependencies/zfp
+
+    INSTALL_COMMAND ${CMAKE_COMMAND} --install <BINARY_DIR> --prefix <INSTALL_DIR>
+)
+ExternalProject_Get_Property(zfp INSTALL_DIR)
+set(ZFP_INCLUDE_DIR ${INSTALL_DIR}/include)
+set(ZFP_LIB_DIR ${INSTALL_DIR}/lib/libzfp.a)
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
-include_directories(${TORCH_INCLUDE_DIRS} ${Python3_INCLUDE_DIRS})
-
+include_directories(${TORCH_INCLUDE_DIRS})
+include_directories(${Python3_INCLUDE_DIRS})
+include_directories(${ZFP_INCLUDE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/zfp_torch/include)
-
-link_libraries(${TORCH_LIBRARIES} ${Python3_LIBRARIES} ${ZFP_LIBRARY})
 
 add_subdirectory(zfp_torch)

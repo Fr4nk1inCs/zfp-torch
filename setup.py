@@ -7,18 +7,20 @@ setup(
     author_email="fushen@mail.ustc.edu.cn",
     url="https://github.com/Fr4nk1inCs/zfp-torch",
     version="0.0.2",
-    include_dirs=["./zfp_torch/include"],
+    include_dirs=["zfp_torch/include", "dependencies/zfp/include"],
     ext_modules=[
         CUDAExtension(
             name="zfp_torch",
-            sources=["./zfp_torch/lib/zfp_compresser.cpp"],
-            include_dirs=["./zfp_torch/include"],
-            libraries=["zfp"],
+            sources=["zfp_torch/lib/zfp_compresser.cpp"],
+            include_dirs=["zfp_torch/include", "dependencies/zfp/include"],
+            libraries=[],
             extra_compile_args=[
                 "-std=c++17",
                 "-DBUILD_PYEXT",
                 "-fvisibility=hidden",
+                "-fPIC",
             ],
+            extra_objects=["dependencies/zfp/lib/libzfp.a"],
         )
     ],
     cmdclass={"build_ext": BuildExtension},
