@@ -157,4 +157,4 @@ cython_debug/
 # custom ignore
 .envrc
 install/
-!custom/*
+!zfp_torch/*

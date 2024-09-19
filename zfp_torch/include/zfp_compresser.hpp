@@ -26,7 +26,7 @@ public:
   Metadata() = default;
 
   std::tuple<zfp_field *, zfp_stream *> to_zfp(const torch::Tensor &,
-                                               double) const;
+                                               long) const;
   torch::Tensor to_empty_tensor(const c10::Device &) const;
 
   void write(void *, const c10::Device &) const;
@@ -49,10 +49,8 @@ class ZFPCompresser {
 public:
   ZFPCompresser(long rate) noexcept : rate(rate){};
 
-  // std::tuple<void *, Metadata> compress(const torch::Tensor &);
   torch::Tensor compress(const torch::Tensor &, bool = true);
 
-  // torch::Tensor decompress(void *, const Metadata &);
   torch::Tensor decompress(const torch::Tensor &,
                            std::optional<const Metadata> = std::nullopt);
 

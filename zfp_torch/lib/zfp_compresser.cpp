@@ -97,7 +97,7 @@ Metadata::Metadata(const torch::Tensor &tensor)
     : sizes(tensor.sizes().vec()), type(zfp_type_(tensor.scalar_type())) {}
 
 std::tuple<zfp_field *, zfp_stream *>
-Metadata::to_zfp(const torch::Tensor &tensor, double compress_rate) const {
+Metadata::to_zfp(const torch::Tensor &tensor, long compress_rate) const {
   auto device = tensor.device();
   CHECK_DEVICE(device);
 
@@ -253,7 +253,6 @@ torch::Tensor ZFPCompresser::compress(const torch::Tensor &input,
   return output;
 }
 
-// torch::Tensor ZFPCompresser::decompress(void *input,
 torch::Tensor ZFPCompresser::decompress(const torch::Tensor &input,
                                         std::optional<const Metadata> meta) {
   LOGGER << "decompress rate " << rate << std::endl;
@@ -289,33 +288,45 @@ torch::Tensor ZFPCompresser::decompress(const torch::Tensor &input,
 }
 
 #ifdef BUILD_PYEXT
-PYBIND11_MODULE(zfp, m) {
+PYBIND11_MODULE(zfp_torch, m) {
   py::class_<ZFPCompresser>(m, "ZFPCompresser")
       .def(py::init<long>())
       .def("compress", &ZFPCompresser::compress, py::arg("input"),
            py::arg("write_meta") = true, R"(
            Compress a tensor using zfp lossy compression (fix-rate mode).
+
            Args:
                input (torch.Tensor): The input tensor to compress.
                write_meta (bool): Whether to write metadata to the compressed. (Default: True)
                  If False, you might need to record the metadata manually by using Metadata class for future decompression.
+            
+           Returns:
+               torch.Tensor: The compressed tensor.
            )")
       .def("decompress", &ZFPCompresser::decompress, py::arg("input"),
            py::arg("meta") = std::nullopt, R"(
            Decompress a tensor using zfp lossy decompression (fix-rate mode).
+
            Args:
                input (torch.Tensor): The input tensor to decompress.
                meta (Metadata): The metadata of the compressed tensor if it does not contain metadata, i.e. `write_meta=False` when using `compress()` (Default: None)
+            
+           Returns:
+               torch.Tensor: The decompressed tensor.
            )")
       .doc() = R"(
         ZFPCompresser(rate: int) -> ZFPCompresser
+
         A class to compress and decompress tensors using zfp lossy compression (fix-rate mode).
+
         Args:
             rate (int): The compression rate for zfp compression.)";
 
   py::class_<Metadata>(m, "metadata").def(py::init<torch::Tensor>()).doc() = R"(
     Metadata(tensor: torch.Tensor) -> Metadata
+
     A class to store metadata of a tensor for zfp compression.
+
     Args:
         tensor (torch.Tensor): The tensor to store metadata.
     )";

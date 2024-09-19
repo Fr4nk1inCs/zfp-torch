@@ -1,5 +1,5 @@
 import torch
-import zfp
+import zfp_torch
 import os
 import numpy as np
 import zfpy
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     debug("Input       :", input)
     debug("Decompressed:", decompressed)
 
-    compresser = zfp.ZFPCompresser(RATE)
+    compresser = zfp_torch.ZFPCompresser(RATE)
     # PyTorch + zfp w/ CUDA
     input = torch.tensor(input, dtype=torch.float32, device="cuda").contiguous()
     data = compresser.compress(input)

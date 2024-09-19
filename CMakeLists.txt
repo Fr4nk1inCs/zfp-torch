@@ -41,13 +41,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 include_directories(${TORCH_INCLUDE_DIRS} ${Python3_INCLUDE_DIRS})
 
-include_directories(${PROJECT_SOURCE_DIR}/custom/include)
+include_directories(${PROJECT_SOURCE_DIR}/zfp_torch/include)
 
 link_libraries(${TORCH_LIBRARIES} ${Python3_LIBRARIES} ${ZFP_LIBRARY})
 
-add_subdirectory(custom)
-
-# add_library(zfp_torch SHARED custom/lib/zfp_compresser.cpp)
-# target_link_libraries(zfp_torch PRIVATE ${LINK_DIRECTORIES})
-# add_executable(zfp_torch_demo custom/src/main.cpp)
-# target_link_libraries(zfp_torch_demo PRIVATE zfp_torch)
+add_subdirectory(zfp_torch)
