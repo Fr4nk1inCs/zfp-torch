@@ -21,6 +21,18 @@ PYBIND11_MODULE(_C, m) {
                     Returns:
                         Metadata: The metadata object.
                     )")
+      .def("maximum_bufsize", &zfp_torch::Metadata::maximum_bufsize,
+           py::arg("device"), py::arg("write") = true, R"(
+            Get the maximum buffer size for the compressed tensor.
+
+            Args:
+                device (torch.device): The device to store the compressed tensor.
+                write (bool): Whether to include the metadata size in the buffer.
+                    (Default: True)
+
+            Returns:
+                int: The maximum buffer size.
+            )")
       .doc() = R"(
         Metadata(rate: int, sizes: List[int], dtype: torch.dtype) -> Metadata
 

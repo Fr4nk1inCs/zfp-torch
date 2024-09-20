@@ -2,8 +2,10 @@
 #include "utils/logger.hpp"
 #include "utils/types.hpp"
 
+#include <c10/core/Device.h>
 #include <cuda.h>
 #include <cuda_runtime_api.h>
+#include <zfp.h>
 
 namespace {
 inline void CHECK_DEVICE(const c10::Device &device) {
@@ -23,6 +25,52 @@ std::vector<T> flatten(const std::vector<T> &sizes, size_t from) {
                                       std::multiplies<T>()));
   return flattened;
 };
+
+std::tuple<zfp_field *, zfp_stream *>
+zfp_helper(void *data, const std::vector<long> sizes, const long rate,
+           const zfp_type type, const c10::Device &device) {
+  CHECK_DEVICE(device);
+
+  zfp_field *field = nullptr;
+
+  LOGGER << sizes.size() << "D field: " << sizes << std::endl;
+  switch (sizes.size()) {
+  case 1:
+    field = zfp_field_1d(data, type, sizes[0]);
+    break;
+  case 2:
+    field = zfp_field_2d(data, type, sizes[0], sizes[1]);
+    break;
+  case 3:
+    field = zfp_field_3d(data, type, sizes[0], sizes[1], sizes[2]);
+    break;
+  case 4:
+    field = zfp_field_4d(data, type, sizes[0], sizes[1], sizes[2], sizes[3]);
+    break;
+  default:
+    AT_ERROR("Unsupported number of dimensions for zfp compression");
+  }
+
+  zfp_stream *stream = zfp_stream_open(NULL);
+
+  LOGGER << "compress rate: " << rate << std::endl;
+  zfp_stream_set_rate(stream, rate, type, sizes.size(), zfp_false);
+
+  if (device.is_cuda()) {
+    LOGGER << "using CUDA parallel execution" << std::endl;
+    zfp_stream_set_execution(stream, zfp_exec_cuda);
+  } else {
+#ifdef _OPENMP
+    LOGGER << "using OpenMP parallel execution" << std::endl;
+    zfp_stream_set_execution(stream, zfp_exec_omp);
+#else
+    LOGGER << "using serial execution" << std::endl;
+    zfp_stream_set_execution(stream, zfp_exec_serial);
+#endif
+  }
+
+  return {field, stream};
+}
 } // namespace
 
 namespace zfp_torch {
@@ -42,51 +90,25 @@ Metadata Metadata::from_tensor(const torch::Tensor &input, long rate) {
 std::tuple<zfp_field *, zfp_stream *>
 Metadata::to_zfp(const torch::Tensor &tensor) const {
   auto device = tensor.device();
-  CHECK_DEVICE(device);
-
-  zfp_field *field = nullptr;
-
   auto sizes_f = flatten(sizes, device.is_cuda() ? 2 : 3);
-
   void *data = tensor.data_ptr();
-  LOGGER << sizes_f.size() << "D field: " << sizes_f << std::endl;
-  switch (sizes_f.size()) {
-  case 1:
-    field = zfp_field_1d(data, type, sizes_f[0]);
-    break;
-  case 2:
-    field = zfp_field_2d(data, type, sizes_f[0], sizes_f[1]);
-    break;
-  case 3:
-    field = zfp_field_3d(data, type, sizes_f[0], sizes_f[1], sizes_f[2]);
-    break;
-  case 4:
-    field = zfp_field_4d(data, type, sizes_f[0], sizes_f[1], sizes_f[2],
-                         sizes_f[3]);
-    break;
-  default:
-    AT_ERROR("Unsupported number of dimensions for zfp compression");
+
+  return zfp_helper(data, sizes_f, rate, type, device);
+}
+
+long Metadata::maximum_bufsize(const c10::Device &device, bool write) const {
+  auto [field, stream] = zfp_helper(nullptr, sizes, rate, type, device);
+
+  long bufsize = zfp_stream_maximum_size(stream, field);
+
+  if (write) {
+    bufsize += byte_size();
   }
 
-  zfp_stream *stream = zfp_stream_open(NULL);
+  zfp_field_free(field);
+  zfp_stream_close(stream);
 
-  LOGGER << "compress rate: " << rate << std::endl;
-  zfp_stream_set_rate(stream, rate, type, sizes_f.size(), zfp_false);
-
-  if (device.is_cuda()) {
-    LOGGER << "using CUDA parallel execution" << std::endl;
-    zfp_stream_set_execution(stream, zfp_exec_cuda);
-  } else {
-#ifdef _OPENMP
-    LOGGER << "using OpenMP parallel execution" << std::endl;
-    zfp_stream_set_execution(stream, zfp_exec_omp);
-#else
-    LOGGER << "using serial execution" << std::endl;
-    zfp_stream_set_execution(stream, zfp_exec_serial);
-#endif
-  }
-
-  return {field, stream};
+  return bufsize;
 }
 
 torch::Tensor Metadata::to_empty_tensor(const c10::Device &device) const {

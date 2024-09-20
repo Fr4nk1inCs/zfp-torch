@@ -17,6 +17,9 @@ public:
   static Metadata from_tensor(const torch::Tensor &, long);
 
   std::tuple<zfp_field *, zfp_stream *> to_zfp(const torch::Tensor &) const;
+
+  long maximum_bufsize(const c10::Device &, bool = true) const;
+
   torch::Tensor to_empty_tensor(const c10::Device &) const;
 
   // length of size + sizes + rate + type

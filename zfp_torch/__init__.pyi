@@ -1,7 +1,5 @@
 import torch
 
-from typing import overload
-
 class Metadata:
     """
     Metadata(rate: int, sizes: list[int], type: torch.dtype) -> Metadata
@@ -14,9 +12,7 @@ class Metadata:
         type (torch.dtype): The data type of the tensor.
     """
 
-    @overload
     def __init__(self, rate: int, sizes: list[int], type: torch.dtype): ...
-    @overload
     @staticmethod
     def from_tensor(tensor: torch.Tensor, rate: int) -> "Metadata":
         """
@@ -31,7 +27,20 @@ class Metadata:
         """
         ...
 
-@overload
+    def maximum_bufsize(self, device: torch.device, write: bool = True) -> int:
+        """
+        Get the maximum buffer size for the compressed tensor.
+
+        Args:
+            device (torch.device): The device to store the compressed tensor.
+            write (bool): Whether to include the metadata size in the buffer.
+                (Default: True)
+
+        Returns:
+            int: The maximum buffer size.
+        """
+        ...
+
 def compress(
     self, input: torch.Tensor, rate: int, write_meta: bool = True
 ) -> torch.Tensor:
@@ -48,7 +57,6 @@ def compress(
         torch.Tensor: The compressed tensor.
     """
 
-@overload
 def decompress(self, input: torch.Tensor, meta: Metadata | None = None) -> torch.Tensor:
     """
     Decompress a tensor using zfp lossy decompression (fix-rate mode).
