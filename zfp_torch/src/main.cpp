@@ -11,6 +11,6 @@ int main() {
   std::cout << tensor << std::endl;
   auto compressed = zfp_torch::compress(tensor, 8);
   std::cout << compressed << std::endl;
-  auto decompressed = zfp_torch::decompress(compressed, 8);
+  auto decompressed = zfp_torch::decompress(compressed);
   std::cout << decompressed << std::endl;
 }
