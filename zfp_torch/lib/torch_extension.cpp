@@ -9,7 +9,7 @@ PYBIND11_MODULE(_C, m) {
   // class Metadata
   //
   py::class_<zfp_torch::Metadata>(m, "Metadata")
-      .def(py::init<long, const std::vector<long> &, const c10::ScalarType &>())
+      .def(py::init<long, const std::vector<long> &, const py::object &>())
       .def_static("from_tensor", &zfp_torch::Metadata::from_tensor,
                   py::arg("input"), py::arg("rate"), R"(
                     Create a Metadata object from a tensor.

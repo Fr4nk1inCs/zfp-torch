@@ -11,6 +11,10 @@ namespace zfp_torch {
 
 class Metadata {
 public:
+#ifdef BUILD_PYEXT
+  Metadata(long, const std::vector<long> &, const py::object &);
+#endif
+
   Metadata(long, const std::vector<long> &, const c10::ScalarType &);
   Metadata() = default;
 

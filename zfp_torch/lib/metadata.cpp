@@ -5,6 +5,7 @@
 #include <c10/core/Device.h>
 #include <cuda.h>
 #include <cuda_runtime_api.h>
+#include <torch/extension.h>
 #include <zfp.h>
 
 namespace {
@@ -82,6 +83,16 @@ std::ostream &operator<<(std::ostream &os, const Metadata &meta) {
 Metadata::Metadata(long rate, const std::vector<long> &sizes,
                    const c10::ScalarType &dtype)
     : rate(rate), sizes(sizes), type(utils::zfp_type_(dtype)) {}
+
+#ifdef BUILD_PYEXT
+Metadata::Metadata(long rate, const std::vector<long> &sizes,
+                   const py::object &dtype)
+    : rate(rate), sizes(sizes) {
+  torch::ScalarType scalar_type =
+      torch::python::detail::py_object_to_dtype(dtype);
+  type = utils::zfp_type_(scalar_type);
+}
+#endif
 
 Metadata Metadata::from_tensor(const torch::Tensor &input, long rate) {
   return Metadata(rate, input.sizes().vec(), input.scalar_type());
