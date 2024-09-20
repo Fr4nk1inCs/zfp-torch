@@ -41,9 +41,7 @@ class Metadata:
         """
         ...
 
-def compress(
-    self, input: torch.Tensor, rate: int, write_meta: bool = True
-) -> torch.Tensor:
+def compress(input: torch.Tensor, rate: int, write_meta: bool = True) -> torch.Tensor:
     """
     Compress a tensor using zfp lossy compression (fix-rate mode).
 
@@ -57,7 +55,7 @@ def compress(
         torch.Tensor: The compressed tensor.
     """
 
-def decompress(self, input: torch.Tensor, meta: Metadata | None = None) -> torch.Tensor:
+def decompress(input: torch.Tensor, meta: Metadata | None = None) -> torch.Tensor:
     """
     Decompress a tensor using zfp lossy decompression (fix-rate mode).
 
