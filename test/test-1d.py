@@ -1,5 +1,6 @@
 import torch
-import zfp_torch
+from zfp_torch import Metadata
+from zfp_torch.TensorCompression import compress, decompress
 import os
 import numpy as np
 import zfpy
@@ -33,8 +34,8 @@ if __name__ == "__main__":
 
     # PyTorch + zfp w/ CUDA
     input = torch.tensor(input, dtype=torch.float32, device="cuda").contiguous()
-    data = zfp_torch.compress(input, rate=RATE)
-    decompressed = zfp_torch.decompress(data)
+    data = compress(input, rate=RATE)
+    decompressed = decompress(data)
 
     debug("=========== PyTorch + zfp (CUDA) ===========")
     debug("Input       :", input)
@@ -42,8 +43,8 @@ if __name__ == "__main__":
 
     # PyTorch + zfp w/o CUDA
     input = input.cpu().contiguous()
-    data = zfp_torch.compress(input, rate=RATE)
-    decompressed = zfp_torch.decompress(data)
+    data = compress(input, rate=RATE)
+    decompressed = decompress(data)
 
     debug("=========== PyTorch + zfp (CPU) ===========")
     debug("Input       :", input)

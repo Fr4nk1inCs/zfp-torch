@@ -24,12 +24,15 @@ endif()
 
 find_package(Python3 COMPONENTS Development REQUIRED)
 
-execute_process(
-    COMMAND ${CMAKE_COMMAND} -E env python3 -c "import torch; print(torch.utils.cmake_prefix_path)"
-    OUTPUT_VARIABLE TORCH_CMAKE_PREFIX_PATH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-set(CMAKE_PREFIX_PATH ${TORCH_CMAKE_PREFIX_PATH} ${CMAKE_PREFIX_PATH})
+# execute_process(
+#     COMMAND ${CMAKE_COMMAND} -E env python3 -c "import torch; print(torch.utils.cmake_prefix_path)"
+#     OUTPUT_VARIABLE TORCH_CMAKE_PREFIX_PATH
+#     OUTPUT_STRIP_TRAILING_WHITESPACE
+# )
+# set(CMAKE_PREFIX_PATH ${TORCH_CMAKE_PREFIX_PATH} ${CMAKE_PREFIX_PATH})
+set(Torch_DIR /usr/local/lib/python3.10/dist-packages/torch/share/cmake/Torch)
+# message(STATUS "Torch CMake prefix path: ${TORCH_CMAKE_PREFIX_PATH}")
+# message(STATUS "Torch dir: ${Torch_DIR}")
 find_package(Torch REQUIRED)
 
 # add zfp as an external project

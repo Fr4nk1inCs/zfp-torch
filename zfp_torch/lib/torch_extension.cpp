@@ -3,8 +3,8 @@
 #include "compress.hpp"
 #include "metadata.hpp"
 
-// #ifdef BUILD_PYEXT
-PYBIND11_MODULE(_C, m) {
+#ifdef BUILD_PYEXT
+PYBIND11_MODULE(zfp_torch, m) {
   //
   // class Metadata
   //
@@ -44,12 +44,16 @@ PYBIND11_MODULE(_C, m) {
             dtype (torch.dtype): The data type of the tensor.
         )";
 
+  auto tensor_compression = m.def_submodule("TensorCompression", R"(
+    A submodule to compress and decompress tensors using zfp lossy compression.
+  )");
   //
   // compress(input: torch.Tensor, rate: int, write_meta: bool=True) ->
   // torch.Tensor
   //
-  m.def("compress", &zfp_torch::compress, py::arg("input"), py::arg("rate"),
-        py::arg("write_meta") = true, R"(
+  tensor_compression.def("compress", &zfp_torch::TensorCompression::compress,
+                         py::arg("input"), py::arg("rate"),
+                         py::arg("write_meta") = true, R"(
             Compress a tensor using zfp lossy compression (fix-rate mode).
 
             Args:
@@ -67,8 +71,9 @@ PYBIND11_MODULE(_C, m) {
   //
   // decompress(input: torch.Tensor, meta: Metadata | None=None) -> torch.Tensor
   //
-  m.def("decompress", &zfp_torch::decompress, py::arg("input"),
-        py::arg("meta") = std::nullopt, R"(
+  tensor_compression.def("decompress",
+                         &zfp_torch::TensorCompression::decompress,
+                         py::arg("input"), py::arg("meta") = std::nullopt, R"(
             Decompress a tensor using zfp lossy decompression (fix-rate mode).
 
             Args:
@@ -81,4 +86,4 @@ PYBIND11_MODULE(_C, m) {
                 torch.Tensor: The decompressed tensor.
           )");
 }
-// #endif
+#endif

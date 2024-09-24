@@ -4,7 +4,40 @@
 #include <zfp.h>
 
 namespace zfp_torch {
-torch::Tensor compress(const torch::Tensor &input, long rate, bool write_meta) {
+
+size_t Base::compress(const void *data, void *buffer, zfp_stream *zfp,
+                      zfp_field *field, size_t bufsize) {
+  bitstream *bitstream = stream_open(buffer, bufsize);
+  zfp_stream_set_bit_stream(zfp, bitstream);
+  zfp_stream_rewind(zfp);
+
+  size_t size = zfp_compress(zfp, field);
+  LOGGER << "size after compression: " << size << std::endl;
+
+  zfp_field_free(field);
+  zfp_stream_close(zfp);
+  stream_close(bitstream);
+
+  return size;
+}
+
+void Base::decompress(void *input, void *output, zfp_stream *zfp,
+                      zfp_field *field) {
+  size_t bufsize = zfp_stream_maximum_size(zfp, field);
+  bitstream *bitstream = stream_open(input, bufsize);
+  zfp_stream_set_bit_stream(zfp, bitstream);
+  zfp_stream_rewind(zfp);
+
+  size_t size = zfp_decompress(zfp, field);
+  LOGGER << "size after decompression: " << size << std::endl;
+
+  zfp_field_free(field);
+  zfp_stream_close(zfp);
+  stream_close(bitstream);
+}
+
+torch::Tensor TensorCompression::compress(const torch::Tensor &input, long rate,
+                                          bool write_meta) {
   auto meta = Metadata::from_tensor(input, rate);
 
   auto [field, zfp] = meta.to_zfp(input);
@@ -28,22 +61,15 @@ torch::Tensor compress(const torch::Tensor &input, long rate, bool write_meta) {
                                    meta.byte_size());
   }
 
-  bitstream *bitstream = stream_open(data_ptr, bufsize);
-  zfp_stream_set_bit_stream(zfp, bitstream);
-  zfp_stream_rewind(zfp);
-
-  size_t size = zfp_compress(zfp, field);
+  size_t size = Base::compress(input.data_ptr(), data_ptr, zfp, field, bufsize);
   LOGGER << "size after compression (without metadata): " << size << std::endl;
-
-  zfp_field_free(field);
-  zfp_stream_close(zfp);
-  stream_close(bitstream);
 
   return output;
 }
 
-torch::Tensor decompress(const torch::Tensor &input,
-                         std::optional<const Metadata> meta) {
+torch::Tensor
+TensorCompression::decompress(const torch::Tensor &input,
+                              std::optional<const Metadata> meta) {
   void *data_ptr;
   if (meta.has_value()) {
     LOGGER << "using provided metadata" << std::endl;
@@ -56,21 +82,7 @@ torch::Tensor decompress(const torch::Tensor &input,
 
   auto output = meta->to_empty_tensor(input.device());
   auto [field, zfp] = meta->to_zfp(output);
-
-  size_t bufsize = zfp_stream_maximum_size(zfp, field);
-  LOGGER << "maximum buffer size: " << bufsize << std::endl;
-
-  bitstream *bitstream = stream_open(data_ptr, bufsize);
-  // bitstream *bitstream = stream_open(input, bufsize);
-  zfp_stream_set_bit_stream(zfp, bitstream);
-  zfp_stream_rewind(zfp);
-
-  size_t size = zfp_decompress(zfp, field);
-  LOGGER << "size after decompression: " << size << std::endl;
-
-  zfp_field_free(field);
-  zfp_stream_close(zfp);
-  stream_close(bitstream);
+  Base::decompress(data_ptr, output.data_ptr(), zfp, field);
 
   return output;
 }

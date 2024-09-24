@@ -10,16 +10,16 @@ import zfp_torch
 
 def compress(input: torch.Tensor, compress_rate: int, write_meta: bool=True) -> torch.Tensor:
     # if write_meta, metadata would be write to the begining of output tensor
-    output = zfp_torch.compress(input, rate=compress_rate, write_meta=write_meta)
+    output = zfp_torch.TensorCompression.compress(input, rate=compress_rate, write_meta=write_meta)
     return output # output is a torch.tensor(dtype=int8)
 
 def decompress(input: torch.Tensor, meta: Metadata | None=None) -> torch.Tensor:
     # meta is None indicates that input tensor contains metadata
-    output = zfp_torch.compress(input, meta=meta)
+    output = zfp_torch.TensorCompression.compress(input, meta=meta)
     return output
 
-def get_metadata(input: torch.tensor, compress_rate: int) -> Metadata:
-    return Metadata.from_tensor(input, rate=compress_rate)
+def get_metadata(input: torch.tensor, compress_rate: int) -> zfp_torch.Metadata:
+    return zfp_torch.Metadata.from_tensor(input, rate=compress_rate)
 ```
 
 ## Install

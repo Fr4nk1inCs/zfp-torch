@@ -10,7 +10,7 @@ setup(
     include_dirs=["zfp_torch/include", "dependencies/zfp/include"],
     ext_modules=[
         CUDAExtension(
-            name="zfp_torch._C",
+            name="zfp_torch",
             sources=[
                 "zfp_torch/lib/compress.cpp",
                 "zfp_torch/lib/metadata.cpp",
@@ -31,5 +31,5 @@ setup(
     cmdclass={"build_ext": BuildExtension},
     include_package_data=True,
     packages=["zfp_torch"],
-    package_data={"zfp_torch": ["py.typed", "__init__.pyi"]},
+    package_data={"zfp_torch": ["py.typed", "__init__.pyi", "TensorCompression.pyi"]},
 )
