@@ -18,8 +18,8 @@ def decompress(input: torch.Tensor, meta: Metadata | None=None) -> torch.Tensor:
     output = zfp_torch.TensorCompression.compress(input, meta=meta)
     return output
 
-def get_metadata(input: torch.tensor, compress_rate: int) -> zfp_torch.Metadata:
-    return zfp_torch.Metadata.from_tensor(input, rate=compress_rate)
+def get_metadata(input: torch.Tensor, compress_rate: int) -> zfp_torch.TensorCompression.Metadata:
+    return zfp_torch.TensorCompression.Metadata.from_tensor(input, rate=compress_rate)
 ```
 
 ## Install

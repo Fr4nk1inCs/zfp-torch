@@ -12,9 +12,10 @@ setup(
         CUDAExtension(
             name="zfp_torch",
             sources=[
-                "zfp_torch/lib/compress.cpp",
-                "zfp_torch/lib/metadata.cpp",
-                "zfp_torch/lib/utils/types.cpp",
+                "zfp_torch/lib/compress/base.cpp",
+                "zfp_torch/lib/compress/pseudo.cpp",
+                "zfp_torch/lib/compress/tensor.cpp",
+                "zfp_torch/lib/compress/parallel.cpp",
                 "zfp_torch/lib/torch_extension.cpp",
             ],
             include_dirs=["zfp_torch/include", "dependencies/zfp/include"],
@@ -23,7 +24,6 @@ setup(
                 "-std=c++17",
                 "-DBUILD_PYEXT",
                 "-fvisibility=hidden",
-                "-fPIC",
             ],
             extra_objects=["dependencies/zfp/lib/libzfp.a"],
         )
@@ -31,5 +31,13 @@ setup(
     cmdclass={"build_ext": BuildExtension},
     include_package_data=True,
     packages=["zfp_torch"],
-    package_data={"zfp_torch": ["py.typed", "__init__.pyi", "TensorCompression.pyi"]},
+    package_data={
+        "zfp_torch": [
+            "py.typed",
+            "__init__.pyi",
+            "TensorCompression.pyi",
+            "PseudoTensorCompression.pyi",
+            "ParallelTensorCompression.pyi",
+        ]
+    },
 )

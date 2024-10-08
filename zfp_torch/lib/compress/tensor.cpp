@@ -1,105 +1,41 @@
-#include "metadata.hpp"
+#include "compress/tensor.hpp"
+#include "compress/base.hpp"
+#include "utils/general.hpp"
 #include "utils/logger.hpp"
 #include "utils/types.hpp"
+#include "utils/zfp.hpp"
 
-#include <c10/core/Device.h>
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #include <torch/extension.h>
 #include <zfp.h>
 
-namespace {
-inline void CHECK_DEVICE(const c10::Device &device) {
-  if (not(device.is_cpu() or device.is_cuda())) {
-    AT_ERROR("Unsupported device type for zfp compression, only CPU and CUDA "
-             "are supported");
-  }
-}
+using Tensor = torch::Tensor;
 
-template <typename T>
-std::vector<T> flatten(const std::vector<T> &sizes, size_t from) {
-  if (sizes.size() <= from) {
-    return sizes;
-  }
-  std::vector<T> flattened(sizes.begin(), sizes.begin() + from);
-  flattened.push_back(std::accumulate(sizes.begin() + from, sizes.end(), 1,
-                                      std::multiplies<T>()));
-  return flattened;
-};
-
-std::tuple<zfp_field *, zfp_stream *>
-zfp_helper(void *data, const std::vector<long> sizes, const long rate,
-           const zfp_type type, const c10::Device &device) {
-  CHECK_DEVICE(device);
-
-  zfp_field *field = nullptr;
-
-  LOGGER << sizes.size() << "D field: " << sizes << std::endl;
-  switch (sizes.size()) {
-  case 1:
-    field = zfp_field_1d(data, type, sizes[0]);
-    break;
-  case 2:
-    field = zfp_field_2d(data, type, sizes[0], sizes[1]);
-    break;
-  case 3:
-    field = zfp_field_3d(data, type, sizes[0], sizes[1], sizes[2]);
-    break;
-  case 4:
-    field = zfp_field_4d(data, type, sizes[0], sizes[1], sizes[2], sizes[3]);
-    break;
-  default:
-    AT_ERROR("Unsupported number of dimensions for zfp compression");
-  }
-
-  zfp_stream *stream = zfp_stream_open(NULL);
-
-  LOGGER << "compress rate: " << rate << std::endl;
-  zfp_stream_set_rate(stream, rate, type, sizes.size(), zfp_false);
-
-  if (device.is_cuda()) {
-    LOGGER << "using CUDA parallel execution" << std::endl;
-    zfp_stream_set_execution(stream, zfp_exec_cuda);
-  } else {
-#ifdef _OPENMP
-    LOGGER << "using OpenMP parallel execution" << std::endl;
-    zfp_stream_set_execution(stream, zfp_exec_omp);
-#else
-    LOGGER << "using serial execution" << std::endl;
-    zfp_stream_set_execution(stream, zfp_exec_serial);
-#endif
-  }
-
-  return {field, stream};
-}
-} // namespace
-
-namespace zfp_torch {
-
+namespace zfp_torch::TensorCompression {
 std::ostream &operator<<(std::ostream &os, const Metadata &meta) {
   return os << "Metadata(" << meta.sizes << ", " << meta.type << ")";
 }
 
 Metadata::Metadata(long rate, const std::vector<long> &sizes,
                    const c10::ScalarType &dtype)
-    : rate(rate), sizes(sizes), type(utils::zfp_type_(dtype)) {}
+    : rate(rate), sizes(sizes), type(to_zfp_type(dtype)) {}
 
 #ifdef BUILD_PYEXT
 Metadata::Metadata(long rate, const std::vector<long> &sizes,
                    const py::object &dtype)
     : rate(rate), sizes(sizes) {
-  torch::ScalarType scalar_type =
-      torch::python::detail::py_object_to_dtype(dtype);
-  type = utils::zfp_type_(scalar_type);
+  auto scalar_type = torch::python::detail::py_object_to_dtype(dtype);
+  type = to_zfp_type(scalar_type);
 }
 #endif
 
-Metadata Metadata::from_tensor(const torch::Tensor &input, long rate) {
+Metadata Metadata::from_tensor(const Tensor &input, long rate) {
   return Metadata(rate, input.sizes().vec(), input.scalar_type());
 }
 
 std::tuple<zfp_field *, zfp_stream *>
-Metadata::to_zfp(const torch::Tensor &tensor) const {
+Metadata::to_zfp(const Tensor &tensor) const {
   auto device = tensor.device();
   auto sizes_f = flatten(sizes, device.is_cuda() ? 2 : 3);
   void *data = tensor.data_ptr();
@@ -122,9 +58,9 @@ long Metadata::maximum_bufsize(const c10::Device &device, bool write) const {
   return bufsize;
 }
 
-torch::Tensor Metadata::to_empty_tensor(const c10::Device &device) const {
+Tensor Metadata::to_empty_tensor(const c10::Device &device) const {
   CHECK_DEVICE(device);
-  auto dtype = utils::scalar_type_(type);
+  auto dtype = to_scalar_type(type);
   return torch::empty(sizes, torch::TensorOptions().device(device).dtype(dtype),
                       torch::MemoryFormat::Contiguous);
 }
@@ -208,4 +144,51 @@ Metadata const Metadata::read(void *buffer, const c10::Device &device) {
   return meta;
 }
 
-} // namespace zfp_torch
+Tensor compress(const Tensor &input, long rate, bool write_meta) {
+  auto meta = Metadata::from_tensor(input, rate);
+
+  auto [field, zfp] = meta.to_zfp(input);
+
+  size_t bufsize = zfp_stream_maximum_size(zfp, field);
+  LOGGER << "maximum buffer size: " << bufsize << std::endl;
+
+  if (write_meta)
+    bufsize += meta.byte_size();
+
+  Tensor output = torch::empty(
+      {static_cast<long>(bufsize)},
+      torch::TensorOptions().device(input.device()).dtype(torch::kUInt8),
+      torch::MemoryFormat::Contiguous);
+
+  void *data_ptr = static_cast<void *>(output.data_ptr());
+
+  if (write_meta) {
+    meta.write(data_ptr, output.device());
+    data_ptr = static_cast<void *>(static_cast<std::byte *>(data_ptr) +
+                                   meta.byte_size());
+  }
+
+  size_t size = Base::compress(data_ptr, zfp, field, bufsize);
+  LOGGER << "size after compression (without metadata): " << size << std::endl;
+
+  return output;
+}
+
+Tensor decompress(const Tensor &input, std::optional<const Metadata> meta) {
+  void *data_ptr;
+  if (meta.has_value()) {
+    LOGGER << "using provided metadata" << std::endl;
+    data_ptr = input.data_ptr();
+  } else {
+    meta.emplace(Metadata::read(input.data_ptr(), input.device()));
+    data_ptr = static_cast<void *>(static_cast<std::byte *>(input.data_ptr()) +
+                                   meta->byte_size());
+  }
+
+  auto output = meta->to_empty_tensor(input.device());
+  auto [field, zfp] = meta->to_zfp(output);
+  Base::decompress(data_ptr, zfp, field);
+
+  return output;
+}
+} // namespace zfp_torch::TensorCompression

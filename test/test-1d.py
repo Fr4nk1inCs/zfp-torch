@@ -1,5 +1,4 @@
 import torch
-from zfp_torch import Metadata
 from zfp_torch.TensorCompression import compress, decompress
 import os
 import numpy as np

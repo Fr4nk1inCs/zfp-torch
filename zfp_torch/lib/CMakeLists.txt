@@ -1,7 +1,8 @@
 add_library(zfp_torch SHARED
-    compress.cpp
-    metadata.cpp
-    utils/types.cpp
+    compress/base.cpp
+    compress/pseudo.cpp
+    compress/tensor.cpp
+    compress/parallel.cpp
 )
 add_dependencies(zfp_torch zfp)
 
